@@ -8,10 +8,15 @@ from fastapi import APIRouter, HTTPException, Query, status
 
 from tititplayer.api.schemas import (
     ErrorResponse,
+    M3UImportRequest,
+    M3UImportResponse,
     TrackCreate,
     TrackResponse,
     TrackSearchResponse,
+    TrackSource,
     TrackUpdate,
+    URLImportRequest,
+    URLImportResponse,
 )
 from tititplayer.db.manager import Database
 
@@ -218,6 +223,180 @@ async def delete_track(track_id: int) -> None:
         )
 
     await db.delete_track(track_id)
+
+
+@router.post(
+    "/import/url",
+    response_model=URLImportResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="Import track from URL",
+    description="Import a track from YouTube, YT Music, or other streaming URL.",
+)
+async def import_from_url(request: URLImportRequest) -> URLImportResponse:
+    """Import a track from a streaming URL using yt-dlp."""
+    from tititplayer.utils.ytdlp import extract_metadata, is_ytdlp_available
+
+    if not is_ytdlp_available():
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="yt-dlp is not installed. Install with: pip install yt-dlp",
+        )
+
+    db = get_db()
+
+    try:
+        # Extract metadata from URL
+        metadata = await extract_metadata(request.url)
+        if not metadata:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Failed to extract metadata from URL",
+            )
+
+        # Determine source type
+        url_lower = request.url.lower()
+        if "music.youtube.com" in url_lower:
+            source = TrackSource.YTMUSIC
+        elif "youtube.com" in url_lower or "youtu.be" in url_lower:
+            source = TrackSource.YOUTUBE
+        else:
+            source = TrackSource.STREAM
+
+        # Add track to database
+        track_id = await db.add_track(
+            path=request.url,
+            title=metadata.title,
+            artist=metadata.artist,
+            album=metadata.album,
+            duration=metadata.duration or 0.0,
+            source=source,
+        )
+
+        track = await db.get_track(track_id)
+        if not track:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Failed to retrieve imported track",
+            )
+
+        # TODO: Add to queue if request.add_to_queue
+
+        return URLImportResponse(
+            track=TrackResponse(
+                id=track.id,
+                path=track.path,
+                title=track.title,
+                artist=track.artist,
+                album=track.album,
+                duration=track.duration,
+                source=track.source,
+                kind=track.kind,
+                created_at=track.created_at,
+            ),
+            metadata={
+                "thumbnail": metadata.thumbnail,
+                "uploader": metadata.uploader,
+                "date": metadata.date,
+                "track_id": metadata.track_id,
+            },
+        )
+
+    except RuntimeError as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=str(e),
+        ) from None
+
+
+@router.post(
+    "/import/m3u",
+    response_model=M3UImportResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="Import tracks from M3U playlist",
+    description="Import tracks from an M3U or M3U8 playlist file.",
+)
+async def import_from_m3u(request: M3UImportRequest) -> M3UImportResponse:
+    """Import tracks from an M3U playlist file."""
+    from pathlib import Path
+
+    from tititplayer.utils.m3u import parse_m3u
+
+    db = get_db()
+
+    m3u_path = Path(request.path).expanduser()
+    if not m3u_path.exists():
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"M3U file not found: {request.path}",
+        )
+
+    entries = parse_m3u(m3u_path)
+    if not entries:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="No tracks found in M3U file",
+        )
+
+    imported_tracks: list[TrackResponse] = []
+    failed = 0
+
+    for entry in entries:
+        try:
+            # Determine source type
+            if entry.is_youtube:
+                source = TrackSource.YOUTUBE
+            elif entry.is_url:
+                source = TrackSource.STREAM
+            else:
+                source = TrackSource.LOCAL
+
+            track_id = await db.add_track(
+                path=entry.path,
+                title=entry.title or Path(entry.path).stem,
+                artist=entry.artist,
+                duration=entry.duration or 0.0,
+                source=source,
+            )
+
+            track = await db.get_track(track_id)
+            if track:
+                imported_tracks.append(
+                    TrackResponse(
+                        id=track.id,
+                        path=track.path,
+                        title=track.title,
+                        artist=track.artist,
+                        album=track.album,
+                        duration=track.duration,
+                        source=track.source,
+                        kind=track.kind,
+                        created_at=track.created_at,
+                    )
+                )
+        except Exception:
+            failed += 1
+
+    playlist_id = None
+    if request.create_playlist and imported_tracks:
+        # Create playlist
+        playlist_name = request.playlist_name or m3u_path.stem
+        playlist_id = await db.create_playlist(
+            name=playlist_name,
+            description=f"Imported from {m3u_path.name}",
+        )
+
+        # Add tracks to playlist
+        for track in imported_tracks:
+            await db.add_track_to_playlist(playlist_id, track.id)
+
+    # TODO: Add to queue if request.add_to_queue
+
+    return M3UImportResponse(
+        imported=len(imported_tracks),
+        failed=failed,
+        playlist_id=playlist_id,
+        tracks=imported_tracks,
+    )
 
 
 @router.get(

@@ -35,6 +35,7 @@ class TrackSource(StrEnum):
     LOCAL = "local"
     STREAM = "stream"
     YOUTUBE = "youtube"
+    YTMUSIC = "ytmusic"
 
 
 # Base Models
@@ -56,6 +57,28 @@ class TrackCreate(TrackBase):
     path: str
 
 
+class URLImportRequest(BaseModel):
+    """Schema for importing a track by URL."""
+
+    url: str = Field(..., description="YouTube, YT Music, or other streaming URL")
+    add_to_queue: bool = Field(default=True, description="Add to queue after import")
+
+
+class M3UImportRequest(BaseModel):
+    """Schema for importing an M3U playlist."""
+
+    path: str = Field(..., description="Path to .m3u or .m3u8 file")
+    create_playlist: bool = Field(
+        default=True, description="Create a playlist from imported tracks"
+    )
+    playlist_name: str | None = Field(
+        default=None, description="Playlist name (uses filename if None)"
+    )
+    add_to_queue: bool = Field(
+        default=False, description="Add imported tracks to queue"
+    )
+
+
 class TrackUpdate(BaseModel):
     """Schema for updating a track."""
 
@@ -73,6 +96,27 @@ class TrackResponse(TrackBase):
     created_at: int
 
     model_config = {"from_attributes": True}
+
+
+# Import responses (must be after TrackResponse)
+
+
+class URLImportResponse(BaseModel):
+    """Schema for URL import response."""
+
+    track: TrackResponse
+    metadata: dict[str, str | float | None] = Field(
+        default_factory=dict, description="Extracted metadata"
+    )
+
+
+class M3UImportResponse(BaseModel):
+    """Schema for M3U import response."""
+
+    imported: int = Field(..., description="Number of tracks imported")
+    failed: int = Field(default=0, description="Number of failed imports")
+    playlist_id: int | None = Field(default=None, description="Created playlist ID")
+    tracks: list[TrackResponse] = Field(default_factory=list)
 
 
 # Playback
