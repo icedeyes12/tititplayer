@@ -24,7 +24,25 @@ def check_mpv_binary() -> bool:
 
 def is_mpv_running() -> bool:
     """Check if MPV is already running with IPC socket."""
-    return MPV_SOCKET_PATH.exists()
+    if not MPV_SOCKET_PATH.exists():
+        return False
+
+    # Socket file exists, but is MPV actually running?
+    # Try to connect to verify
+    import socket
+    try:
+        sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+        sock.settimeout(1.0)
+        sock.connect(str(MPV_SOCKET_PATH))
+        sock.close()
+        return True
+    except (OSError, ConnectionRefusedError, FileNotFoundError):
+        # Stale socket file - remove it
+        try:
+            MPV_SOCKET_PATH.unlink()
+        except Exception:
+            pass
+        return False
 
 
 async def start_mpv() -> subprocess.Popen | None:
