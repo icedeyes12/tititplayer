@@ -214,7 +214,7 @@ tititplayer/
 │   │   ├── tracks.py          # Tracks router
 │   │   ├── playlists.py       # Playlists router
 │   │   └── status.py           # Status router
-│   ├── tui/                   # Textual TUI (Phase 4)
+│   ├── tui/                   # Textual TUI
 │   ├── config.py              # Configuration constants
 │   ├── cli.py                 # CLI entry point
 │   └── daemon.py              # Daemon entry point
