@@ -11,7 +11,7 @@ license = "MIT"
 requires-python = ">=3.12"
 authors = [{ name = "Bani Baskara", email = "banibaskara@gmail.com" }]
 classifiers = [
-    "Development Status :: 3 - Alpha",
+    "Development Status :: 2 - Pre-Alpha",
     "Environment :: Console",
     "Intended Audience :: Developers",
     "License :: OSI Approved :: MIT License",
