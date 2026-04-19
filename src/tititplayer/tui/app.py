@@ -50,14 +50,14 @@ class TititApp(App):
 
     #app-title {
         width: auto;
-        color: $text-on-primary;
+        color: $text-pri;
         content-align: left middle;
         text-style: bold;
     }
 
     #connection-status-label {
         width: auto;
-        color: $text-on-primary;
+        color: $text-primary;
         content-align: right middle;
         margin-left: auto;
     }
