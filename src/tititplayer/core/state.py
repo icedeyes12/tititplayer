@@ -196,15 +196,13 @@ class StateManager:
             # Set up event callback
             self._mpv.add_event_callback(self._handle_mpv_event)
 
-            # Request property observations
-            await self._mpv.observe_properties()
-
             # Restore state if we have a track
             if self._state.current_track:
                 await self._restore_playback_state()
 
-            # Listen for events (blocking)
-            await self._mpv.listen()
+            # Keep running until disconnected or stopped
+            while self._running and self._mpv.is_connected:
+                await asyncio.sleep(1.0)
 
         except ConnectionError:
             self._connected = False
@@ -229,18 +227,18 @@ class StateManager:
             return
 
         # Load the track into MPV
-        await self._mpv.loadfile(self._state.path)
+        await self._mpv.play(self._state.path)
 
         # Set position if we had one
         if self._state.time_pos > 0:
             await asyncio.sleep(0.5)  # Wait for file to load
-            await self._mpv.seek_absolute(self._state.time_pos)
+            await self._mpv.seek(self._state.time_pos, absolute=True)
 
         # Set pause state
         if self._state.pause:
             await self._mpv.pause()
         else:
-            await self._mpv.resume()
+            await self._mpv.unpause()
 
     async def _handle_mpv_event(self, event: MPVEvent) -> None:
         """Handle MPV events and update state."""
@@ -369,10 +367,10 @@ class StateManager:
             self._state.duration = track.duration
 
         if self._connected:
-            await self._mpv.loadfile(track.path)
+            await self._mpv.play(track.path)
             if position > 0:
                 await asyncio.sleep(0.5)
-                await self._mpv.seek_absolute(position)
+                await self._mpv.seek(position, absolute=True)
 
         await self._db.update_queue_state(
             current_track_id=track.id,
@@ -395,7 +393,7 @@ class StateManager:
     async def resume(self) -> None:
         """Resume playback."""
         if self._connected:
-            await self._mpv.resume()
+            await self._mpv.unpause()
         async with self._state_lock:
             self._state.pause = False
         self._notify_state_change()
@@ -411,7 +409,7 @@ class StateManager:
     async def seek(self, position: float) -> None:
         """Seek to absolute position in seconds."""
         if self._connected:
-            await self._mpv.seek_absolute(position)
+            await self._mpv.seek(position, absolute=True)
         async with self._state_lock:
             self._state.time_pos = position
         await self._write_position_to_db(force=True)
