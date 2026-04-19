@@ -50,7 +50,7 @@ class TititApp(App):
 
     #app-title {
         width: auto;
-        color: $text-pri;
+        color: $text-primary;
         content-align: left middle;
         text-style: bold;
     }
