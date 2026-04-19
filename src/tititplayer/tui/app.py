@@ -33,13 +33,11 @@ class TititApp(App):
     """
 
     CSS = """
-    /* Main layout */
     Screen {
         layout: vertical;
         background: $surface;
     }
 
-    /* Header */
     #main-header {
         height: 2;
         dock: top;
@@ -49,20 +47,20 @@ class TititApp(App):
     }
 
     #app-title {
-        width: auto;
         color: $text-primary;
         content-align: left middle;
         text-style: bold;
     }
 
     #connection-status-label {
-        width: auto;
         color: $text-primary;
         content-align: right middle;
-        margin-left: auto;
     }
 
-    /* Main content */
+    #connection-status {
+        text-align: right;
+    }
+
     #main-content {
         layout: horizontal;
         height: 1fr;
@@ -79,7 +77,6 @@ class TititApp(App):
         layout: vertical;
     }
 
-    /* Queue list */
     #queue-header {
         height: 1;
         background: $primary-darken-2;
@@ -98,7 +95,6 @@ class TititApp(App):
         padding: 0 1;
     }
 
-    /* Now playing */
     #now-playing-header {
         height: 1;
         background: $primary-darken-2;
@@ -152,7 +148,6 @@ class TititApp(App):
     }
 
     #volume-display {
-        width: auto;
         color: $text;
     }
 
@@ -163,11 +158,9 @@ class TititApp(App):
     }
 
     #mode-display {
-        width: auto;
         color: $text-muted;
     }
 
-    /* Footer */
     #keybindings-label {
         height: 1;
         background: $surface-darken-1;
@@ -193,7 +186,6 @@ class TititApp(App):
         Binding("q", "quit", "Quit"),
     ]
 
-    # Reactive state
     daemon_connected: bool = False
     current_position: int | None = None
 
@@ -227,15 +219,10 @@ class TititApp(App):
         self._stop_polling()
         await close_client()
 
-    # ═══════════════════════════════════════════════════════════════════════
-    # Client Connection
-    # ═══════════════════════════════════════════════════════════════════════
-
     async def _connect_client(self) -> None:
         """Connect to the API daemon."""
         try:
             self._client = await get_client()
-            # Test connection
             if await self._client.health_check():
                 self.daemon_connected = True
                 self._update_connection_status(True)
@@ -253,10 +240,6 @@ class TititApp(App):
             status_widget.connected = connected
         except Exception:
             pass
-
-    # ═══════════════════════════════════════════════════════════════════════
-    # Polling
-    # ═══════════════════════════════════════════════════════════════════════
 
     def _start_polling(self) -> None:
         """Start periodic polling."""
@@ -277,7 +260,6 @@ class TititApp(App):
             except asyncio.CancelledError:
                 break
             except Exception:
-                # Log but continue polling
                 await asyncio.sleep(2.0)
 
     async def _poll_status(self) -> None:
@@ -286,7 +268,6 @@ class TititApp(App):
             return
 
         try:
-            # Check connection first
             if not await self._client.health_check():
                 self.daemon_connected = False
                 self._update_connection_status(False)
@@ -295,11 +276,9 @@ class TititApp(App):
             self.daemon_connected = True
             self._update_connection_status(True)
 
-            # Get playback state
             playback = await self._client.get_playback_state()
             self._update_now_playing(playback)
 
-            # Get queue state
             queue = await self._client.get_queue()
             self._update_queue(queue)
 
@@ -312,7 +291,6 @@ class TititApp(App):
         try:
             now_playing = self.query_one(NowPlayingWidget)
 
-            # Current track info
             if playback.get("current_track"):
                 track = playback["current_track"]
                 now_playing.title = track.get("title", "Unknown")
@@ -325,7 +303,6 @@ class TititApp(App):
                 now_playing.album = ""
                 now_playing.duration = 0.0
 
-            # Playback state
             now_playing.position = playback.get("position", 0.0)
             now_playing.status = playback.get("status", "stopped")
             now_playing.volume = playback.get("volume", 100)
@@ -333,7 +310,6 @@ class TititApp(App):
             now_playing.repeat_mode = playback.get("repeat_mode", "none")
             now_playing.shuffle_mode = playback.get("shuffle_mode", False)
 
-            # Store current position for queue highlighting
             self.current_position = playback.get("queue_position")
 
         except Exception:
@@ -349,21 +325,17 @@ class TititApp(App):
 
             for i, item in enumerate(items):
                 track = item.get("track", {})
-                tracks.append(QueueTrack.from_api(
-                    track,
-                    position=i,
-                    current_position=self.current_position
-                ))
+                tracks.append(
+                    QueueTrack.from_api(
+                        track, position=i, current_position=self.current_position
+                    )
+                )
 
             queue_widget.tracks = tracks
             queue_widget.current_position = self.current_position
 
         except Exception:
             pass
-
-    # ═══════════════════════════════════════════════════════════════════════
-    # Key Bindings Actions
-    # ═══════════════════════════════════════════════════════════════════════
 
     async def action_toggle_pause(self) -> None:
         """Toggle play/pause."""
@@ -378,7 +350,6 @@ class TititApp(App):
         try:
             queue_widget = self.query_one(QueueListWidget)
             queue_list = queue_widget.query_one("#queue-list")
-            # ListView handles j/k by default, but we can scroll programmatically
             queue_list.action_cursor_down()
         except Exception:
             pass
@@ -461,7 +432,6 @@ class TititApp(App):
                 queue_widget = self.query_one(QueueListWidget)
                 queue_list = queue_widget.query_one("#queue-list")
 
-                # Get selected index
                 if queue_list.index is not None:
                     await self._client.goto_position(queue_list.index)
             except APIClientError:
@@ -470,10 +440,6 @@ class TititApp(App):
     def action_quit(self) -> None:
         """Quit the TUI (daemon keeps running)."""
         self.exit()
-
-    # ═══════════════════════════════════════════════════════════════════════
-    # Widget Event Handlers
-    # ═══════════════════════════════════════════════════════════════════════
 
     async def on_queue_list_widget_track_selected(
         self, event: QueueListWidget.TrackSelected

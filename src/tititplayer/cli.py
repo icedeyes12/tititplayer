@@ -14,7 +14,6 @@ from tititplayer.tui.app import run_tui
 def main() -> None:
     """Tititplayer - Modern async terminal music player TUI."""
     click.echo("Starting tititplayer TUI...")
-    click.echo("Make sure the daemon is running: titit-daemon")
     run_tui()
 
 
