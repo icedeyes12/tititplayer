@@ -341,6 +341,10 @@ class TititApp(App):
         except Exception:
             pass
 
+    # ═══════════════════════════════════════════════════════════════════════
+    # Key Bindings Actions
+    # ═══════════════════════════════════════════════════════════════════════
+
     async def action_toggle_pause(self) -> None:
         """Toggle play/pause."""
         if self._client:
@@ -441,71 +445,108 @@ class TititApp(App):
             except APIClientError:
                 pass
 
-    async def action_import_url(self) -> None:
+    # ═══════════════════════════════════════════════════════════════════════
+    # Dialog Actions (using push_screen with callback)
+    # ═══════════════════════════════════════════════════════════════════════
+
+    def action_import_url(self) -> None:
         """Open URL import dialog."""
         from tititplayer.tui.dialogs import URLInputModal
 
-        url = await self.push_screen_wait(URLInputModal())
-        if url and self._client:
-            try:
-                # Import via API
-                result = await self._client._request(
-                    "POST", "/api/v1/tracks/import/url", json={"url": url}
-                )
-                # Add to queue
-                if result.get("track_id"):
-                    await self._client.add_to_queue([result["track_id"]])
-            except APIClientError:
-                pass
+        self.push_screen(URLInputModal(), self._handle_url_import)
 
-    async def action_browse_files(self) -> None:
-        """Open file browser dialog."""
+    def _handle_url_import(self, result: str | None) -> None:
+        """Handle URL import result."""
+        if result and self._client:
+            # Use run_worker to run async code
+            self.run_worker(self._import_url_async(result), exclusive=True)
 
-        from tititplayer.tui.dialogs import FileBrowserModal
-
-        selected_path = await self.push_screen_wait(FileBrowserModal())
-        if selected_path and self._client:
-            try:
-                # Import via API
-                result = await self._client._request(
-                    "POST",
-                    "/api/v1/tracks/import/m3u",
-                    json={"path": str(selected_path), "create_playlist": False},
-                )
-                # Add tracks to queue
-                track_ids = result.get("track_ids", [])
-                if track_ids:
-                    await self._client.add_to_queue(track_ids)
-            except APIClientError:
-                pass
-
-    async def action_select_playlist(self) -> None:
-        """Open playlist selection dialog."""
-        from tititplayer.tui.dialogs import PlaylistSelectModal
-
+    async def _import_url_async(self, url: str) -> None:
+        """Import URL asynchronously."""
         if not self._client:
             return
-
         try:
-            # Get playlists
+            result = await self._client._request(
+                "POST", "/api/v1/tracks/import/url", json={"url": url}
+            )
+            if result.get("track_id"):
+                await self._client.add_to_queue([result["track_id"]])
+        except APIClientError:
+            pass
+
+    def action_browse_files(self) -> None:
+        """Open file browser dialog."""
+        from tititplayer.tui.dialogs import FileBrowserModal
+
+        self.push_screen(FileBrowserModal(), self._handle_file_browse)
+
+    def _handle_file_browse(self, result: str | None) -> None:
+        """Handle file browse result."""
+        if result and self._client:
+            self.run_worker(self._import_file_async(result), exclusive=True)
+
+    async def _import_file_async(self, path: str) -> None:
+        """Import file asynchronously."""
+        if not self._client:
+            return
+        try:
+            result = await self._client._request(
+                "POST",
+                "/api/v1/tracks/import/m3u",
+                json={"path": path, "create_playlist": False},
+            )
+            track_ids = result.get("track_ids", [])
+            if track_ids:
+                await self._client.add_to_queue(track_ids)
+        except APIClientError:
+            pass
+
+    def action_select_playlist(self) -> None:
+        """Open playlist selection dialog."""
+        if not self._client:
+            return
+        # Fetch playlists first
+        self.run_worker(self._fetch_and_show_playlists(), exclusive=True)
+
+    async def _fetch_and_show_playlists(self) -> None:
+        """Fetch playlists and show selection dialog."""
+        if not self._client:
+            return
+        try:
             result = await self._client._request("GET", "/api/v1/playlists")
             playlists = result.get("playlists", [])
+            if playlists:
+                from tititplayer.tui.dialogs import PlaylistSelectModal
 
-            if not playlists:
-                return
-
-            playlist_id = await self.push_screen_wait(PlaylistSelectModal(playlists))
-            if playlist_id:
-                # Play the playlist
-                await self._client._request(
-                    "POST", f"/api/v1/playlists/{playlist_id}/play"
+                self.push_screen(
+                    PlaylistSelectModal(playlists), self._handle_playlist_select
                 )
+        except APIClientError:
+            pass
+
+    def _handle_playlist_select(self, result: int | None) -> None:
+        """Handle playlist selection result."""
+        if result and self._client:
+            self.run_worker(self._play_playlist_async(result), exclusive=True)
+
+    async def _play_playlist_async(self, playlist_id: int) -> None:
+        """Play playlist asynchronously."""
+        if not self._client:
+            return
+        try:
+            await self._client._request(
+                "POST", f"/api/v1/playlists/{playlist_id}/play"
+            )
         except APIClientError:
             pass
 
     def action_quit(self) -> None:
         """Quit the TUI (daemon keeps running)."""
         self.exit()
+
+    # ═══════════════════════════════════════════════════════════════════════
+    # Widget Event Handlers
+    # ═══════════════════════════════════════════════════════════════════════
 
     async def on_queue_list_widget_track_selected(
         self, event: QueueListWidget.TrackSelected
