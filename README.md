@@ -50,7 +50,7 @@ flowchart TB
 
 ```bash
 # Clone and install
-git clone <repo-url>
+git clone https://github.com/icedeyes12/tititplayer.git
 cd tititplayer
 pip install -e ".[dev]"
 
