@@ -56,8 +56,8 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     _mpv_client = MPVClient(MPV_SOCKET_PATH)
 
     # Initialize state manager
-    _state_manager = StateManager(_mpv_client, _db)
-    await _state_manager.load()
+    _state_manager = StateManager(_db, str(MPV_SOCKET_PATH))
+    await _state_manager.start()
 
     # Initialize queue engine
     _queue_engine = QueueEngine(_db, _state_manager)
