@@ -4,16 +4,15 @@ Tests for the API server.
 These tests use FastAPI's TestClient to verify endpoint behavior.
 """
 
-import asyncio
 import tempfile
 from pathlib import Path
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 from fastapi.testclient import TestClient
 
 from tititplayer.api.app import app
-from tititplayer.db.manager import Database, Track, QueueState, QueueItem
+from tititplayer.db.manager import Database
 
 
 @pytest.fixture

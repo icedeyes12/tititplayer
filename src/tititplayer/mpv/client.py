@@ -11,12 +11,16 @@ from __future__ import annotations
 
 import asyncio
 import json
-from dataclasses import dataclass, field
+from collections.abc import Callable
+from dataclasses import dataclass
 from enum import StrEnum
 from pathlib import Path
-from typing import Any, Callable
+from typing import TYPE_CHECKING, Any, Self
 
 from tititplayer.config import MPV_SOCKET_PATH
+
+if TYPE_CHECKING:
+    pass
 
 
 class MPVEventType(StrEnum):
@@ -138,11 +142,11 @@ class MPVClient:
             raise ConnectionError(
                 f"MPV socket not found at {self._socket_path}. "
                 "Ensure MPV is running with --input-ipc-server={socket}"
-            )
+            ) from None
         except ConnectionRefusedError:
             raise ConnectionError(
                 f"Could not connect to MPV socket at {self._socket_path}"
-            )
+            ) from None
 
         self._running = True
         self._receive_task = asyncio.create_task(self._receive_loop())
@@ -179,7 +183,7 @@ class MPVClient:
 
     async def _observe_properties(self) -> None:
         """Set up property observation for state tracking."""
-        for prop, default in OBSERVED_PROPERTIES:
+        for prop, _default in OBSERVED_PROPERTIES:
             await self._send_command("observe_property", self._request_id, prop)
             self._request_id += 1
 
@@ -217,9 +221,9 @@ class MPVClient:
             # Wait for response
             return await asyncio.wait_for(future, timeout=10.0)
 
-        except asyncio.TimeoutError:
+        except TimeoutError:
             self._pending_requests.pop(request_id, None)
-            raise TimeoutError(f"MPV command timed out: {args[0]}")
+            raise TimeoutError(f"MPV command timed out: {args[0]}") from None
         except Exception:
             self._pending_requests.pop(request_id, None)
             raise

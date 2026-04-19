@@ -5,12 +5,11 @@ Note: These tests require a running MPV instance with IPC enabled.
 Run MPV with: mpv --idle --input-ipc-server=~/.mpvsocket
 """
 
-import asyncio
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import MagicMock
 
 import pytest
 
-from tititplayer.mpv.client import MPVClient, MPVEvent, MPVEventType
+from tititplayer.mpv.client import MPVClient, MPVEvent
 
 
 @pytest.fixture

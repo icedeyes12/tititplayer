@@ -4,18 +4,17 @@ API router for playlists endpoints.
 
 from __future__ import annotations
 
-from fastapi import APIRouter, HTTPException, Query, status
+from fastapi import APIRouter, HTTPException, status
 
 from tititplayer.api.schemas import (
     ErrorResponse,
-    PlaylistCreate,
-    PlaylistUpdate,
     PlaylistAddTracks,
+    PlaylistCreate,
     PlaylistResponse,
+    PlaylistUpdate,
     TrackResponse,
 )
 from tititplayer.db.manager import Database
-
 
 router = APIRouter(prefix="/playlists", tags=["playlists"])
 

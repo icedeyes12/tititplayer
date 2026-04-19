@@ -5,7 +5,6 @@ Async database manager for tititplayer using aiosqlite.
 from __future__ import annotations
 
 import asyncio
-import sqlite3
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
@@ -250,7 +249,8 @@ class Database:
     async def get_all_tracks(self) -> list[Track]:
         """Get all tracks in the library."""
         rows = await self._fetch_all(
-            "SELECT id, path, title, artist, album, duration, created_at, source, kind FROM tracks ORDER BY created_at DESC"
+            "SELECT id, path, title, artist, album, duration, "
+            "created_at, source, kind FROM tracks ORDER BY created_at DESC"
         )
         return [Track.from_row(row) for row in rows]
 
@@ -449,7 +449,10 @@ class Database:
             VALUES (?, ?, ?, ?, ?, ?, ?)
             RETURNING id
             """,
-            (track_id, now, position, int(completed), title_snapshot, artist_snapshot, source_snapshot),
+            (
+                track_id, now, position, int(completed),
+                title_snapshot, artist_snapshot, source_snapshot
+            ),
         )
         row = await cursor.fetchone()
         await self._conn.commit()
@@ -516,7 +519,8 @@ class Database:
     async def get_all_playlists(self) -> list[Playlist]:
         """Get all playlists."""
         rows = await self._fetch_all(
-            "SELECT id, name, description, created_at, updated_at FROM playlists ORDER BY updated_at DESC"
+            "SELECT id, name, description, created_at, updated_at "
+            "FROM playlists ORDER BY updated_at DESC"
         )
         playlists = []
         for row in rows:

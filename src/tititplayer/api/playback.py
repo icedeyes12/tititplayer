@@ -9,19 +9,18 @@ from fastapi import APIRouter, HTTPException, status
 from tititplayer.api.schemas import (
     ErrorResponse,
     PlaybackStateResponse,
-    PlayRequest,
-    SeekRequest,
-    VolumeRequest,
-    SpeedRequest,
-    RepeatRequest,
-    RepeatMode,
     PlaybackStatus,
-    ProgressResponse,
+    PlayRequest,
+    RepeatMode,
+    RepeatRequest,
+    SeekRequest,
+    SpeedRequest,
+    VolumeRequest,
 )
-from tititplayer.core.state import StateManager, RepeatMode as CoreRepeatMode
 from tititplayer.core.queue import QueueEngine
+from tititplayer.core.state import RepeatMode as CoreRepeatMode
+from tititplayer.core.state import StateManager
 from tititplayer.db.manager import Database
-
 
 router = APIRouter(prefix="/playback", tags=["playback"])
 
@@ -229,7 +228,7 @@ async def stop() -> PlaybackStateResponse:
 async def seek(request: SeekRequest) -> PlaybackStateResponse:
     """Seek to position."""
     sm = get_state_manager()
-    
+
     if not sm.state.current_track:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -288,13 +287,13 @@ async def toggle_mute() -> PlaybackStateResponse:
 async def set_repeat(request: RepeatRequest) -> PlaybackStateResponse:
     """Set repeat mode."""
     qe = get_queue_engine()
-    
+
     mode_map = {
         RepeatMode.OFF: CoreRepeatMode.OFF,
         RepeatMode.SINGLE: CoreRepeatMode.SINGLE,
         RepeatMode.ALL: CoreRepeatMode.ALL,
     }
-    
+
     await qe.set_repeat_mode(mode_map[request.mode])
     return await get_playback_state()
 
@@ -311,7 +310,7 @@ async def set_repeat(request: RepeatRequest) -> PlaybackStateResponse:
 async def next_track() -> PlaybackStateResponse:
     """Go to next track."""
     qe = get_queue_engine()
-    
+
     track = await qe.next()
     if not track:
         raise HTTPException(
@@ -334,7 +333,7 @@ async def next_track() -> PlaybackStateResponse:
 async def prev_track() -> PlaybackStateResponse:
     """Go to previous track."""
     qe = get_queue_engine()
-    
+
     track = await qe.prev()
     if not track:
         raise HTTPException(

@@ -8,12 +8,11 @@ import time
 
 from fastapi import APIRouter
 
-from tititplayer.api.schemas import ProgressResponse, ServerStatusResponse, PlaybackStatus
-from tititplayer.core.state import StateManager
+from tititplayer.api.schemas import PlaybackStatus, ProgressResponse, ServerStatusResponse
 from tititplayer.core.queue import QueueEngine
+from tititplayer.core.state import StateManager
 from tititplayer.db.manager import Database
 from tititplayer.mpv.client import MPVClient
-
 
 router = APIRouter(prefix="/status", tags=["status"])
 
@@ -73,7 +72,7 @@ def get_mpv_client() -> MPVClient:
 )
 async def get_server_status() -> ServerStatusResponse:
     """Get server status."""
-    sm = get_state_manager()
+    get_state_manager()
     qe = get_queue_engine()
     mpv = get_mpv_client()
 

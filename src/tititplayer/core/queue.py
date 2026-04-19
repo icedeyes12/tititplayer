@@ -14,13 +14,14 @@ import asyncio
 import random
 from dataclasses import dataclass, field
 from enum import StrEnum
-from typing import TYPE_CHECKING, Any, Self
+from typing import TYPE_CHECKING
 
-from tititplayer.db.manager import Database, QueueItem, Track
 from tititplayer.core.state import RepeatMode
+from tititplayer.db.manager import Database, QueueItem, Track
 
 if TYPE_CHECKING:
     from collections.abc import Callable
+
     from tititplayer.core.state import StateManager
 
 
@@ -166,7 +167,7 @@ class QueueEngine:
 
             # Add to DB and get the item
             item_id = await self._db.add_queue_item(track_id, position)
-            
+
             # Create QueueItem
             import time
             now = int(time.time())
@@ -312,10 +313,16 @@ class QueueEngine:
             if self._state.current_position == old_position:
                 self._state.current_position = new_position
             elif old_position < new_position:
-                if self._state.current_position > old_position and self._state.current_position <= new_position:
+                if (
+                    self._state.current_position > old_position
+                    and self._state.current_position <= new_position
+                ):
                     self._state.current_position -= 1
             else:
-                if self._state.current_position >= new_position and self._state.current_position < old_position:
+                if (
+                    self._state.current_position >= new_position
+                    and self._state.current_position < old_position
+                ):
                     self._state.current_position += 1
 
         # Notify
@@ -492,7 +499,6 @@ class QueueEngine:
 
             # Remember current track
             current_track_id = self._state.current_track_id
-            current_position = self._state.current_position
 
             # Fisher-Yates shuffle
             items = self._state.items[:]

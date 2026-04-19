@@ -10,12 +10,10 @@ from typing import Any
 from rich.style import Style
 from rich.text import Text
 from textual.app import ComposeResult
-from textual.containers import Container, Horizontal, Vertical
+from textual.containers import Container
 from textual.message import Message
 from textual.reactive import reactive
-from textual.widget import Widget
-from textual.widgets import Button, Label, ListItem, ListView, ProgressBar, Static
-
+from textual.widgets import Label, ListItem, ListView, ProgressBar, Static
 
 # ═══════════════════════════════════════════════════════════════════════════
 # Track Item Widget
@@ -31,9 +29,14 @@ class QueueTrack:
     album: str
     duration: float
     is_current: bool = False
-    
+
     @classmethod
-    def from_api(cls, data: dict[str, Any], position: int, current_position: int | None = None) -> "QueueTrack":
+    def from_api(
+        cls,
+        data: dict[str, Any],
+        position: int,
+        current_position: int | None = None
+    ) -> QueueTrack:
         """Create from API response."""
         return cls(
             id=data.get("id", 0),
@@ -48,36 +51,36 @@ class QueueTrack:
 
 class TrackListItem(ListItem):
     """A track item in the queue list."""
-    
+
     track_data: reactive[QueueTrack | None] = reactive(None)
-    
+
     def __init__(self, track: QueueTrack | None = None, **kwargs: Any) -> None:
         super().__init__(**kwargs)
         self.track_data = track
-    
+
     def compose(self) -> ComposeResult:
         if self.track_data:
             # Show current track with different style
             style = Style(bold=True, color="yellow") if self.track_data.is_current else Style()
-            
-            duration_str = self._format_duration(self.track_data.duration)
+
+            self._format_duration(self.track_data.duration)
             track_text = f"{self.track_data.title}"
             if self.track_data.artist:
                 track_text += f" — {self.track_data.artist}"
-            
+
             yield Label(
                 Text(f"{self.track_data.position + 1:3d}. {track_text}", style=style),
                 classes="track-title"
             )
         else:
             yield Label("Empty", classes="track-title")
-    
+
     def _format_duration(self, seconds: float) -> str:
         """Format duration as M:SS."""
         mins = int(seconds // 60)
         secs = int(seconds % 60)
         return f"{mins}:{secs:02d}"
-    
+
     def update_track(self, track: QueueTrack) -> None:
         """Update track data and refresh display."""
         self.track_data = track
@@ -93,7 +96,7 @@ class TrackListItem(ListItem):
 
 class NowPlayingWidget(Container):
     """Displays current track info and progress bar."""
-    
+
     title: reactive[str] = reactive("Not Playing")
     artist: reactive[str] = reactive("")
     album: reactive[str] = reactive("")
@@ -104,7 +107,7 @@ class NowPlayingWidget(Container):
     muted: reactive[bool] = reactive(False)
     repeat_mode: reactive[str] = reactive("none")
     shuffle_mode: reactive[bool] = reactive(False)
-    
+
     def compose(self) -> ComposeResult:
         yield Label("♪ Now Playing", id="now-playing-header")
         yield Container(
@@ -125,33 +128,33 @@ class NowPlayingWidget(Container):
             Label(self._mode_text(), id="mode-display"),
             id="playback-info"
         )
-    
+
     def _format_time(self, seconds: float) -> str:
         """Format time as M:SS or H:MM:SS."""
         if seconds <= 0:
             return "0:00"
-        
+
         total_seconds = int(seconds)
         hours = total_seconds // 3600
         mins = (total_seconds % 3600) // 60
         secs = total_seconds % 60
-        
+
         if hours > 0:
             return f"{hours}:{mins:02d}:{secs:02d}"
         return f"{mins}:{secs:02d}"
-    
+
     def _status_text(self) -> str:
         """Get status display text."""
         if self.muted:
             return "🔇 Muted"
-        
+
         status_map = {
             "playing": "▶ Playing",
             "paused": "⏸ Paused",
             "stopped": "⏹ Stopped",
         }
         return status_map.get(self.status, "⏹ Stopped")
-    
+
     def _mode_text(self) -> str:
         """Get mode display text."""
         parts = []
@@ -162,18 +165,18 @@ class NowPlayingWidget(Container):
         elif self.repeat_mode == "all":
             parts.append("🔁 All")
         return " | ".join(parts) if parts else "—"
-    
+
     def watch_position(self, position: float) -> None:
         """Update progress when position changes."""
         try:
             progress_bar = self.query_one("#progress-bar", ProgressBar)
             progress_bar.update(progress=int(position))
-            
+
             position_label = self.query_one("#position-label", Label)
             position_label.update(self._format_time(position))
         except Exception:
             pass  # Widget not mounted yet
-    
+
     def watch_duration(self, duration: float) -> None:
         """Update progress bar total when duration changes."""
         try:
@@ -181,7 +184,7 @@ class NowPlayingWidget(Container):
             progress_bar.total = max(1, int(duration))
         except Exception:
             pass
-    
+
     def watch_title(self, title: str) -> None:
         """Update title display."""
         try:
@@ -189,7 +192,7 @@ class NowPlayingWidget(Container):
             label.update(title if title else "—")
         except Exception:
             pass
-    
+
     def watch_artist(self, artist: str) -> None:
         """Update artist display."""
         try:
@@ -197,7 +200,7 @@ class NowPlayingWidget(Container):
             label.update(artist if artist else "—")
         except Exception:
             pass
-    
+
     def watch_album(self, album: str) -> None:
         """Update album display."""
         try:
@@ -205,7 +208,7 @@ class NowPlayingWidget(Container):
             label.update(album if album else "—")
         except Exception:
             pass
-    
+
     def watch_volume(self, volume: int) -> None:
         """Update volume display."""
         try:
@@ -213,7 +216,7 @@ class NowPlayingWidget(Container):
             label.update(f"🔊 {volume}%")
         except Exception:
             pass
-    
+
     def watch_muted(self, muted: bool) -> None:
         """Update status display when muted changes."""
         try:
@@ -221,7 +224,7 @@ class NowPlayingWidget(Container):
             label.update(self._status_text())
         except Exception:
             pass
-    
+
     def watch_status(self, status: str) -> None:
         """Update status display."""
         try:
@@ -229,7 +232,7 @@ class NowPlayingWidget(Container):
             label.update(self._status_text())
         except Exception:
             pass
-    
+
     def watch_repeat_mode(self, mode: str) -> None:
         """Update mode display."""
         try:
@@ -237,7 +240,7 @@ class NowPlayingWidget(Container):
             label.update(self._mode_text())
         except Exception:
             pass
-    
+
     def watch_shuffle_mode(self, shuffle: bool) -> None:
         """Update mode display."""
         try:
@@ -253,44 +256,44 @@ class NowPlayingWidget(Container):
 
 class QueueListWidget(Container):
     """Queue list with navigation."""
-    
+
     tracks: reactive[list[QueueTrack]] = reactive(list)
     current_position: reactive[int | None] = reactive(None)
-    
+
     class TrackSelected(Message):
         """Emitted when a track is selected."""
         def __init__(self, position: int) -> None:
             super().__init__()
             self.position = position
-    
+
     def compose(self) -> ComposeResult:
         yield Label("♫ Queue", id="queue-header")
         yield ListView(id="queue-list")
-    
+
     def watch_tracks(self, tracks: list[QueueTrack]) -> None:
         """Update list when tracks change."""
         try:
             list_view = self.query_one("#queue-list", ListView)
             list_view.clear()
-            
+
             for track in tracks:
-                track.is_current = (self.current_position is not None and 
+                track.is_current = (self.current_position is not None and
                                    track.position == self.current_position)
                 list_view.append(TrackListItem(track))
         except Exception:
             pass
-    
+
     def watch_current_position(self, position: int | None) -> None:
         """Highlight current track."""
         try:
             list_view = self.query_one("#queue-list", ListView)
-            for i, item in enumerate(list_view.children):
+            for _i, item in enumerate(list_view.children):
                 if isinstance(item, TrackListItem) and item.track_data:
                     item.track_data.is_current = (item.track_data.position == position)
                     item.update_track(item.track_data)
         except Exception:
             pass
-    
+
     def on_list_view_selected(self, event: ListView.Selected) -> None:
         """Handle track selection."""
         if isinstance(event.item, TrackListItem) and event.item.track_data:
@@ -303,17 +306,17 @@ class QueueListWidget(Container):
 
 class ConnectionStatus(Static):
     """Displays daemon connection status."""
-    
+
     connected: reactive[bool] = reactive(False)
-    
+
     def compose(self) -> ComposeResult:
         yield Label(self._status_text(), id="connection-status-label")
-    
+
     def _status_text(self) -> str:
         if self.connected:
             return "🟢 Daemon Online"
         return "🔴 Daemon Offline"
-    
+
     def watch_connected(self, connected: bool) -> None:
         """Update status display."""
         try:
@@ -329,7 +332,7 @@ class ConnectionStatus(Static):
 
 class KeyBindingsFooter(Static):
     """Displays key bindings help."""
-    
+
     def compose(self) -> ComposeResult:
         yield Label(
             "[Space] Play/Pause │ [j/k] Navigate │ [Ctrl+n/Ctrl+p] Next/Prev │ "

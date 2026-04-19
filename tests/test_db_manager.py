@@ -2,13 +2,12 @@
 Tests for the database manager.
 """
 
-import asyncio
 import tempfile
 from pathlib import Path
 
 import pytest
 
-from tititplayer.db.manager import Database, Track, QueueState, QueueItem, HistoryEntry, Playlist
+from tititplayer.db.manager import Database
 
 
 @pytest.fixture

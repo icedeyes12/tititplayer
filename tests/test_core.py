@@ -4,16 +4,15 @@ Tests for the State Manager and Queue Engine.
 Note: These tests mock MPV connection to avoid needing a running MPV instance.
 """
 
-import asyncio
 import tempfile
 from pathlib import Path
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import MagicMock
 
 import pytest
 
+from tititplayer.core.queue import QueueEngine, QueueEvent
+from tititplayer.core.state import PlaybackState, RepeatMode, StateManager
 from tititplayer.db.manager import Database, Track
-from tititplayer.core.state import StateManager, PlaybackState, RepeatMode
-from tititplayer.core.queue import QueueEngine, QueueEvent, QueueEventData
 
 
 @pytest.fixture

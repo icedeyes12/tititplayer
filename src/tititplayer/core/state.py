@@ -13,12 +13,12 @@ from __future__ import annotations
 
 import asyncio
 import time
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from enum import StrEnum
-from typing import TYPE_CHECKING, Any, Self
+from typing import TYPE_CHECKING
 
 from tititplayer.config import MPV_SOCKET_PATH
-from tititplayer.db.manager import Database, QueueItem, QueueState, Track
+from tititplayer.db.manager import Database, Track
 from tititplayer.mpv.client import MPVClient, MPVEvent, MPVEventType
 
 if TYPE_CHECKING:
@@ -434,7 +434,7 @@ class StateManager:
             self._state.speed = speed
         self._notify_state_change()
 
-    async def stop(self) -> None:
+    async def stop_playback(self) -> None:
         """Stop playback."""
         if self._connected:
             await self._mpv.stop()
@@ -443,6 +443,10 @@ class StateManager:
         await self._write_position_to_db(force=True)
 
         async with self._state_lock:
+            self._state.current_track = None
+            self._state.time_pos = 0.0
+            self._state.duration = 0.0
+            self._state.playback_status = "stopped"
             self._state.pause = True
 
         self._notify_state_change()

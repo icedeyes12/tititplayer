@@ -9,12 +9,11 @@ from fastapi import APIRouter, HTTPException, Query, status
 from tititplayer.api.schemas import (
     ErrorResponse,
     TrackCreate,
-    TrackUpdate,
     TrackResponse,
     TrackSearchResponse,
+    TrackUpdate,
 )
 from tititplayer.db.manager import Database
-
 
 router = APIRouter(prefix="/tracks", tags=["tracks"])
 

@@ -7,18 +7,18 @@ from __future__ import annotations
 from fastapi import APIRouter, HTTPException, status
 
 from tititplayer.api.schemas import (
+    AddToQueueRequest,
     ErrorResponse,
-    QueueStateResponse,
+    MoveQueueItemRequest,
     QueueItemResponse,
     QueueNavigationRequest,
-    AddToQueueRequest,
-    MoveQueueItemRequest,
+    QueueStateResponse,
     RepeatMode,
 )
-from tititplayer.core.queue import QueueEngine, QueueEvent
-from tititplayer.core.state import StateManager, RepeatMode as CoreRepeatMode
+from tititplayer.core.queue import QueueEngine
+from tititplayer.core.state import RepeatMode as CoreRepeatMode
+from tititplayer.core.state import StateManager
 from tititplayer.db.manager import Database
-
 
 router = APIRouter(prefix="/queue", tags=["queue"])
 
@@ -63,7 +63,7 @@ async def build_queue_item_response(item) -> dict:
     """Build a queue item response with track data."""
     db = get_db()
     track = await db.get_track(item.track_id)
-    
+
     track_data = None
     if track:
         track_data = {

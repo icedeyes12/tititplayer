@@ -9,22 +9,20 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import logging
-from typing import AsyncGenerator
+from collections.abc import AsyncGenerator
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
+# Import routers
+from tititplayer.api import playback, playlists, queue, status, tracks
 from tititplayer.api.schemas import ErrorResponse
 from tititplayer.config import API_HOST, API_PORT, DATABASE_PATH, MPV_SOCKET_PATH
+from tititplayer.core.queue import QueueEngine
+from tititplayer.core.state import StateManager
 from tititplayer.db.manager import Database
 from tititplayer.mpv.client import MPVClient
-from tititplayer.core.state import StateManager
-from tititplayer.core.queue import QueueEngine
-
-# Import routers
-from tititplayer.api import playback, queue, tracks, playlists, status
-
 
 # Configure logging
 logging.basicConfig(
@@ -92,9 +90,12 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
                     )
                     await asyncio.sleep(retry_delay)
                 else:
-                    logger.error(f"Failed to connect to MPV after {max_retries} attempts: {e}")
+                    logger.error(
+                        f"Failed to connect to MPV after {max_retries} attempts: {e}"
+                    )
                     logger.warning(
-                        "Running in headless mode - start MPV with: mpv --idle --input-ipc-server=~/.mpvsocket"
+                        "Running in headless mode - "
+                        "start MPV with: mpv --idle --input-ipc-server=~/.mpvsocket"
                     )
 
     mpv_task = asyncio.create_task(connect_mpv())

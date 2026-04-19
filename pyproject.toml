@@ -21,7 +21,7 @@ dependencies = [
     "aiosqlite>=0.20",
     "aiohttp>=3.9",
     "fastapi>=0.115",
-    "uvicorn[standard]>=0.30",
+    "uvicorn>=0.30",  # no [standard] - avoids uvloop, watchfiles (Termux incompatible)
     "click>=8.1",
     "textual>=0.47",
     "pydantic>=2.9",
@@ -33,7 +33,7 @@ dependencies = [
 dev = [
     "pytest>=8.3",
     "pytest-asyncio>=0.24",
-    "ruff>=0.6",
+    # ruff is installed system-wide via: pkg install ruff
     "mypy>=1.11",
 ]
 

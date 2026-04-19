@@ -6,12 +6,9 @@ These models define the strict contract between the server and clients.
 
 from __future__ import annotations
 
-from datetime import datetime
 from enum import StrEnum
-from typing import Any, Self
 
-from pydantic import BaseModel, Field, field_validator
-
+from pydantic import BaseModel, Field
 
 # Enums
 
@@ -154,8 +151,12 @@ class QueueStateResponse(BaseModel):
 class AddToQueueRequest(BaseModel):
     """Schema for adding tracks to queue."""
 
-    track_ids: list[int] = Field(..., min_length=1, description="List of track IDs to add")
-    position: int | None = Field(default=None, ge=0, description="Position to insert at (default: end)")
+    track_ids: list[int] = Field(
+        ..., min_length=1, description="List of track IDs to add"
+    )
+    position: int | None = Field(
+        default=None, ge=0, description="Position to insert at (default: end)"
+    )
 
 
 class MoveQueueItemRequest(BaseModel):
