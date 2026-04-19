@@ -33,9 +33,10 @@ class TititApp(App):
     """
 
     CSS = """
+    /* Main layout */
     Screen {
         layout: vertical;
-        background: $surface;
+        background: transparent;
     }
 
     #main-header {
@@ -183,6 +184,9 @@ class TititApp(App):
         Binding("s", "toggle_shuffle", "Shuffle"),
         Binding("r", "cycle_repeat", "Repeat"),
         Binding("enter", "play_selected", "Play"),
+        Binding("u", "import_url", "URL"),
+        Binding("f", "browse_files", "Files"),
+        Binding("p", "select_playlist", "Playlist"),
         Binding("q", "quit", "Quit"),
     ]
 
@@ -436,6 +440,68 @@ class TititApp(App):
                     await self._client.goto_position(queue_list.index)
             except APIClientError:
                 pass
+
+    async def action_import_url(self) -> None:
+        """Open URL import dialog."""
+        from tititplayer.tui.dialogs import URLInputModal
+
+        url = await self.push_screen_wait(URLInputModal())
+        if url and self._client:
+            try:
+                # Import via API
+                result = await self._client._request(
+                    "POST", "/api/v1/tracks/import/url", json={"url": url}
+                )
+                # Add to queue
+                if result.get("track_id"):
+                    await self._client.add_to_queue([result["track_id"]])
+            except APIClientError:
+                pass
+
+    async def action_browse_files(self) -> None:
+        """Open file browser dialog."""
+
+        from tititplayer.tui.dialogs import FileBrowserModal
+
+        selected_path = await self.push_screen_wait(FileBrowserModal())
+        if selected_path and self._client:
+            try:
+                # Import via API
+                result = await self._client._request(
+                    "POST",
+                    "/api/v1/tracks/import/m3u",
+                    json={"path": str(selected_path), "create_playlist": False},
+                )
+                # Add tracks to queue
+                track_ids = result.get("track_ids", [])
+                if track_ids:
+                    await self._client.add_to_queue(track_ids)
+            except APIClientError:
+                pass
+
+    async def action_select_playlist(self) -> None:
+        """Open playlist selection dialog."""
+        from tititplayer.tui.dialogs import PlaylistSelectModal
+
+        if not self._client:
+            return
+
+        try:
+            # Get playlists
+            result = await self._client._request("GET", "/api/v1/playlists")
+            playlists = result.get("playlists", [])
+
+            if not playlists:
+                return
+
+            playlist_id = await self.push_screen_wait(PlaylistSelectModal(playlists))
+            if playlist_id:
+                # Play the playlist
+                await self._client._request(
+                    "POST", f"/api/v1/playlists/{playlist_id}/play"
+                )
+        except APIClientError:
+            pass
 
     def action_quit(self) -> None:
         """Quit the TUI (daemon keeps running)."""
